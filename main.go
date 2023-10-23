@@ -9,10 +9,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/dgrijalva/jwt-go"
-	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/Godtide/rating/config"
 	"github.com/Godtide/rating/handlers"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
@@ -26,11 +26,12 @@ const (
 )
 
 var (
-	c        *mongo.Client
-	db       *mongo.Database
-	prodCol  *mongo.Collection
-	usersCol *mongo.Collection
-	cfg      config.Properties
+	c         *mongo.Client
+	db        *mongo.Database
+	prodCol   *mongo.Collection
+	usersCol  *mongo.Collection
+	walletCol *mongo.Collection
+	cfg       config.Properties
 )
 
 func init() {
@@ -46,6 +47,7 @@ func init() {
 	db = c.Database(cfg.DBName)
 	prodCol = db.Collection(cfg.ProductCollection)
 	usersCol = db.Collection(cfg.UsersCollection)
+	walletCol = db.Collection(cfg.WalletCollection)
 
 	isUserIndexUnique := true
 	indexModel := mongo.IndexModel{
@@ -110,6 +112,7 @@ func main() {
 	}))
 	h := &handlers.ProductHandler{Col: prodCol}
 	uh := &handlers.UsersHandler{Col: usersCol}
+	w := &handlers.WalletHandler{UserCol: usersCol, WalletCol: walletCol}
 	e.GET("/products/:id", h.GetProduct)
 	e.DELETE("/products/:id", h.DeleteProduct, jwtMiddleware, adminMiddleware)
 	e.PUT("/products/:id", h.UpdateProduct, middleware.BodyLimit("1M"), jwtMiddleware)
@@ -118,6 +121,8 @@ func main() {
 
 	e.POST("/users", uh.CreateUser)
 	e.POST("/auth", uh.AuthnUser)
+
+	e.POST("/wallet/:email", w.CreateWallet)
 	e.Logger.Infof("Listening on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
 }

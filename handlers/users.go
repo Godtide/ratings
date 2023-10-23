@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
-	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/Godtide/rating/config"
 	"github.com/Godtide/rating/dbiface"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,9 +19,10 @@ import (
 
 //User represents a user
 type User struct {
-	Email    string `json:"username" bson:"username" validate:"required,email"`
-	Password string `json:"password,omitempty" bson:"password" validate:"required,min=8,max=300"`
-	IsAdmin  bool   `json:"isadmin,omitempty" bson:"isadmin"`
+	ID       primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	Email    string             `json:"username" bson:"username" validate:"required,email"`
+	Password string             `json:"password,omitempty" bson:"password" validate:"required,min=8,max=300"`
+	IsAdmin  bool               `json:"isadmin,omitempty" bson:"isadmin"`
 }
 
 //UsersHandler users handler
@@ -87,7 +89,7 @@ func insertUser(ctx context.Context, user User, collection dbiface.CollectionAPI
 		return newUser,
 			echo.NewHTTPError(http.StatusInternalServerError, errorMessage{Message: "Unable to create the user"})
 	}
-	return User{Email: user.Email}, nil
+	return user, nil
 }
 
 //CreateUser creates a user
@@ -139,6 +141,24 @@ func authenticateUser(ctx context.Context, reqUser User, collection dbiface.Coll
 			echo.NewHTTPError(http.StatusUnauthorized, errorMessage{Message: "Credentials invalid"})
 	}
 	return User{Email: storedUser.Email}, nil
+}
+
+func (h *UsersHandler) FindUser(ctx context.Context, username string, collection dbiface.CollectionAPI) (User, error) {
+	var user User
+	res := collection.FindOne(ctx, bson.M{"username": username})
+	err := res.Decode(&user)
+	if err != nil && err != mongo.ErrNoDocuments {
+		log.Errorf("Unable to decode retrieved user: %v", err)
+		return user,
+			echo.NewHTTPError(http.StatusUnprocessableEntity, errorMessage{Message: "Unable to decode retrieved user"})
+	}
+	if user.Email == "" {
+		log.Printf("User by %s exists", username)
+
+		return user,
+			echo.NewHTTPError(http.StatusUnprocessableEntity, errorMessage{Message: "user with email doesn't exist"})
+	}
+	return user, nil
 }
 
 // AuthnUser authenticates a user
