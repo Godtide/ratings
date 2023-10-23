@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/ethereum/go-ethereum v1.13.4
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/labstack/echo/v4 v4.11.2
 	github.com/labstack/gommon v0.4.0
@@ -13,8 +14,10 @@ require (
 )
 
 require (
+	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/ethereum/go-ethereum v1.13.4 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
+	github.com/holiman/uint256 v1.2.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 )
 

@@ -112,7 +112,6 @@ func main() {
 	}))
 	h := &handlers.ProductHandler{Col: prodCol}
 	uh := &handlers.UsersHandler{UserCol: usersCol, WalletCol: walletCol}
-	//w := &handlers.WalletHandler{UserCol: usersCol, WalletCol: walletCol}
 	e.GET("/products/:id", h.GetProduct)
 	e.DELETE("/products/:id", h.DeleteProduct, jwtMiddleware, adminMiddleware)
 	e.PUT("/products/:id", h.UpdateProduct, middleware.BodyLimit("1M"), jwtMiddleware)
@@ -122,7 +121,6 @@ func main() {
 	e.POST("/users", uh.CreateUser)
 	e.POST("/auth", uh.AuthnUser)
 
-	//e.POST("/wallet/:email", w.CreateWallet)
 	e.Logger.Infof("Listening on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
 }

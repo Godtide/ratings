@@ -128,6 +128,8 @@ func (h *UsersHandler) CreateUser(c echo.Context) error {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 
+	fmt.Println(fmt.Sprintf("user data %s", resUser))
+
 	partWallet, err := createWallet()
 	if err != nil {
 		log.Errorf("Unable to create wallet :%+v", err)
@@ -136,7 +138,7 @@ func (h *UsersHandler) CreateUser(c echo.Context) error {
 	}
 
 	wallet, httpError := insertWallet(context.Background(), Wallet{
-		UserId:     resUser.ID,
+		UserId:      	primitive.ObjectIDFromHex(resUser.ID.),
 		PrivateKey: partWallet.PrivateKey,
 		PublicKey:  partWallet.PublicKey,
 	}, h.WalletCol)
@@ -196,11 +198,7 @@ func findUser(ctx context.Context, username string, collection dbiface.Collectio
 	return user, nil
 }
 
-//func //(w *WalletHandler) createWallet(c echo.Context) error {
-
 func createWallet() (Wallet, error) {
-
-	//respUser, err := findUser(context.Background(), c.Param("email"), w.UserCol)
 
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
