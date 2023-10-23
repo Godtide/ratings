@@ -117,7 +117,6 @@ func main() {
 	e.PUT("/products/:id", h.UpdateProduct, middleware.BodyLimit("1M"), jwtMiddleware)
 	e.POST("/products", h.CreateProducts, middleware.BodyLimit("1M"), jwtMiddleware)
 	e.GET("/products", h.GetProducts)
-
 	e.POST("/users", uh.CreateUser)
 	e.POST("/auth", uh.AuthnUser)
 
