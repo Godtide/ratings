@@ -50,10 +50,10 @@ func insertReward(ctx context.Context, reward Reward, collection dbiface.Collect
 	return insertID.InsertedID, nil
 }
 
-//CreateRewars create rewards on mongodb database
+//CreateRewards create rewards on mongodb database
 func (r *RewardHandler) CreateRewards(c echo.Context) error {
 	var reward Reward
-	c.Echo().Validator = &ProductValidator{validator: v}
+	c.Echo().Validator = &rewardValidator{validator: v}
 	if err := c.Bind(&reward); err != nil {
 		log.Errorf("Unable to bind : %v", err)
 		return c.JSON(http.StatusUnprocessableEntity, errorMessage{Message: "unable to parse request payload"})

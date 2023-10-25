@@ -23,3 +23,27 @@ type userValidator struct {
 func (u *userValidator) Validate(i interface{}) error {
 	return u.validator.Struct(i)
 }
+
+type WalletValidator struct {
+	validator *validator.Validate
+}
+
+func (w *WalletValidator) Validate(i interface{}) error {
+	return w.validator.Struct(i)
+}
+
+type rewardValidator struct {
+	validator *validator.Validate
+}
+
+func (v *rewardValidator) Validate(i interface{}) error {
+	return v.validator.Struct(i)
+}
+
+type userRewardValidator struct {
+	validator *validator.Validate
+}
+
+func (ur *userRewardValidator) Validate(i interface{}) error {
+	return ur.validator.Struct(i)
+}
