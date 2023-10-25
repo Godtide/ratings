@@ -26,6 +26,27 @@ type WalletHandler struct {
 	WalletCol dbiface.CollectionAPI
 }
 
+func createUserWallet(ctx context.Context, userId primitive.ObjectID, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
+	partWallet, err := createWallet()
+	if err != nil {
+		log.Errorf("Unable to create wallet :%+v", err)
+		return partWallet,
+			echo.NewHTTPError(http.StatusBadRequest, errorMessage{Message: "error generating public and private keys public address "})
+	}
+
+	fullWallet, httpError := insertWallet(ctx, Wallet{
+		UserId:     userId,
+		PrivateKey: partWallet.PrivateKey,
+		PublicKey:  partWallet.PublicKey,
+	}, collection)
+
+	if httpError != nil {
+		return partWallet,
+			echo.NewHTTPError(http.StatusBadRequest, errorMessage{Message: "error creating wallet"})
+	}
+	return fullWallet, nil
+}
+
 func insertWallet(ctx context.Context, wallet Wallet, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
 	var insertedId interface{}
 	insertedId, err := collection.InsertOne(ctx, wallet)

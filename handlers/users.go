@@ -106,9 +106,8 @@ func insertUser(ctx context.Context, user User, collection dbiface.CollectionAPI
 //CreateUser creates a user
 func (h *UsersHandler) CreateUser(c echo.Context) error {
 	var (
-		user       User
-		resUser    User
-		partWallet Wallet
+		user    User
+		resUser User
 	)
 	c.Echo().Validator = &userValidator{validator: v}
 	if err := c.Bind(&user); err != nil {
@@ -126,18 +125,7 @@ func (h *UsersHandler) CreateUser(c echo.Context) error {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 
-	partWallet, err := createWallet()
-	if err != nil {
-		log.Errorf("Unable to create wallet :%+v", err)
-		return c.JSON(http.StatusBadRequest,
-			errorMessage{Message: "Unable to create wallet"})
-	}
-
-	fullWallet, httpError := insertWallet(context.Background(), Wallet{
-		UserId:     resUser.ID,
-		PrivateKey: partWallet.PrivateKey,
-		PublicKey:  partWallet.PublicKey,
-	}, h.WalletCol)
+	fullWallet, httpError := createUserWallet(context.Background(), resUser.ID, h.WalletCol)
 
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
@@ -152,7 +140,6 @@ func (h *UsersHandler) CreateUser(c echo.Context) error {
 	c.Response().Header().Set("x-auth-token", "Bearer "+token)
 	return c.JSON(http.StatusCreated, fullWallet)
 }
-
 func authenticateUser(ctx context.Context, reqUser User, collection dbiface.CollectionAPI) (User, *echo.HTTPError) {
 	var storedUser User //user in db
 	// check whether the user exists or not

@@ -12,25 +12,21 @@ import (
 	"time"
 )
 
-//Reward describes reward types available
-type Reward struct {
-	ID     primitive.ObjectID `json:"_id,omitempty" bson:"_id"validate:"required"`
-	Type   string             `         json:"type" bson:"type" validate:"required"` //high. medium, low
-	Points int8               `json:"points, omitempty" bson:"points" validate:"required"`
-	//AmountRedeemable int8             `json:"redeemable" bson:"redeemable" validate:"required"`
-	expiry    int8      `json:"expiry" bson:"expiry" validate:"required"` //expiry in days
-	CreatedAt time.Time `json:"createdAt" bson:"createdAt" validate:"required"`
-	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt" validate:"required"`
-	DeletedAt time.Time `json:"deletedAt" bson:"deletedAt" validate:"required"`
+//UserReward describes reward accrued to a user
+type UserReward struct {
+	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id"validate:"omitempty"`
+	UserId    primitive.ObjectID `json:"user_id, omitempty" bson:"user_id, omitempty"`
+	status    string             `         json:"status,omitempty" bson:"status" validate:"required"` //open, redeemed, expired
+	CreatedAt time.Time          `json:"createdAt" bson:"createdAt" validate:"required"`
+	expiresAt time.Time          `json:"expiresAt" bson:"expiresAt" validate:"required"` //expiry in days, gets deleted after expiry
 }
 
 //RewardHandler a user_reward handler
-type RewardHandler struct {
-	Reward     dbiface.CollectionAPI
+type UserRewardHandler struct {
 	UserReward dbiface.CollectionAPI
 }
 
-func insertReward(ctx context.Context, reward Reward, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
+func insertUserReward(ctx context.Context, reward UserReward, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
 	reward.ID = primitive.NewObjectID()
 	insertID, err := collection.InsertOne(ctx, reward)
 	if err != nil {
@@ -42,8 +38,8 @@ func insertReward(ctx context.Context, reward Reward, collection dbiface.Collect
 }
 
 //CreateRewards create rewards on mongodb database
-func (r *RewardHandler) CreateRewards(c echo.Context) error {
-	var reward Reward
+func (r *RewardHandler) CreateUserRewards(c echo.Context) error {
+	var reward UserReward
 	c.Echo().Validator = &rewardValidator{validator: v}
 	if err := c.Bind(&reward); err != nil {
 		log.Errorf("Unable to bind : %v", err)
@@ -53,15 +49,15 @@ func (r *RewardHandler) CreateRewards(c echo.Context) error {
 		log.Errorf("Unable to validate the product %+v %v", reward, err)
 		return c.JSON(http.StatusBadRequest, errorMessage{Message: "unable to validate request payload"})
 	}
-	IDs, httpError := insertReward(context.Background(), reward, r.Reward)
+	IDs, httpError := insertUserReward(context.Background(), reward, r.Reward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 	return c.JSON(http.StatusCreated, IDs)
 }
 
-func findRewards(ctx context.Context, q url.Values, collection dbiface.CollectionAPI) ([]Reward, *echo.HTTPError) {
-	var rewards []Reward
+func findUserRewards(ctx context.Context, q url.Values, collection dbiface.CollectionAPI) ([]UserReward, *echo.HTTPError) {
+	var rewards []UserReward
 	filter := make(map[string]interface{})
 	for k, v := range q {
 		filter[k] = v[0]
@@ -91,15 +87,15 @@ func findRewards(ctx context.Context, q url.Values, collection dbiface.Collectio
 }
 
 //GetRewards gets a list of reward
-func (h *RewardHandler) GetRewards(c echo.Context) error {
-	products, httpError := findRewards(context.Background(), c.QueryParams(), h.Reward)
+func (h *RewardHandler) GetUserRewards(c echo.Context) error {
+	products, httpError := findUserRewards(context.Background(), c.QueryParams(), h.Reward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 	return c.JSON(http.StatusOK, products)
 }
 
-func findReward(ctx context.Context, id string, collection dbiface.CollectionAPI) (Reward, *echo.HTTPError) {
+func findUserReward(ctx context.Context, id string, collection dbiface.CollectionAPI) (Reward, *echo.HTTPError) {
 	var reward Reward
 	docID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -118,8 +114,8 @@ func findReward(ctx context.Context, id string, collection dbiface.CollectionAPI
 }
 
 //GetProduct gets a single reward
-func (h *RewardHandler) GetReward(c echo.Context) error {
-	reward, httpError := findReward(context.Background(), c.Param("id"), h.Reward)
+func (h *RewardHandler) GetUserReward(c echo.Context) error {
+	reward, httpError := findUserReward(context.Background(), c.Param("id"), h.Reward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
