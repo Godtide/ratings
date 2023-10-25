@@ -2,12 +2,7 @@ package handlers
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/crypto/sha3"
 	"net/http"
 	"time"
 
@@ -28,14 +23,6 @@ type User struct {
 	Email    string             `json:"username" bson:"username" validate:"required,email"`
 	Password string             `json:"password,omitempty" bson:"password" validate:"required,min=8,max=300"`
 	IsAdmin  bool               `json:"isadmin,omitempty" bson:"isadmin"`
-}
-
-//Wallet describes an user wallet to manage keys
-type Wallet struct {
-	ID         primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	UserId     primitive.ObjectID `json:"user_id, omitempty" bson:"user_id, omitempty"`
-	PrivateKey string             `json:"private_key" bson:"private_key" validate:"required"`
-	PublicKey  string             `json:"public_key" bson:"public_key" validate:"required"`
 }
 
 //UsersHandler users handler
@@ -187,38 +174,6 @@ func authenticateUser(ctx context.Context, reqUser User, collection dbiface.Coll
 			echo.NewHTTPError(http.StatusUnauthorized, errorMessage{Message: "Credentials invalid"})
 	}
 	return User{Email: storedUser.Email}, nil
-}
-
-func createWallet() (Wallet, error) {
-	privateKey, err := crypto.GenerateKey()
-	if err != nil {
-		log.Fatal(err)
-	}
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatal("error casting public key to ECDSA")
-	}
-	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
-
-	hash := sha3.NewLegacyKeccak256()
-	fmt.Println(hexutil.Encode(hash.Sum(nil)[12:]))
-
-	return Wallet{
-		PrivateKey: hexutil.Encode(hash.Sum(nil)[12:]),
-		PublicKey:  address,
-	}, nil
-}
-
-func insertWallet(ctx context.Context, wallet Wallet, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
-	var insertedId interface{}
-	insertedId, err := collection.InsertOne(ctx, wallet)
-	if err != nil {
-		log.Errorf("Unable to insert to Database:%v", err)
-		return nil,
-			echo.NewHTTPError(http.StatusInternalServerError, errorMessage{Message: "unable to insert to database"})
-	}
-	return insertedId, nil
 }
 
 // AuthnUser authenticates a user

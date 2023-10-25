@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/Godtide/rating/config"
+	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/labstack/gommon/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
