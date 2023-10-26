@@ -22,9 +22,11 @@ type UserReward struct {
 	expiresAt time.Time          `json:"expiresAt" bson:"expiresAt" validate:"required"` //expiry in days, gets deleted after expiry
 }
 
-//RewardHandler a user_reward handler
+//UserRewardHandler a user_reward handler
 type UserRewardHandler struct {
 	UserReward dbiface.CollectionAPI
+	Reward     dbiface.CollectionAPI
+	Wallet     dbiface.CollectionAPI
 }
 
 func insertUserReward(ctx context.Context, reward UserReward, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
@@ -88,8 +90,8 @@ func findUserRewards(ctx context.Context, q url.Values, collection dbiface.Colle
 }
 
 //GetRewards gets a list of reward
-func (h *RewardHandler) GetUserRewards(c echo.Context) error {
-	products, httpError := findUserRewards(context.Background(), c.QueryParams(), h.Reward)
+func (r *UserRewardHandler) GetUserRewards(c echo.Context) error {
+	products, httpError := findUserRewards(context.Background(), c.QueryParams(), r.UserReward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
@@ -115,8 +117,8 @@ func findUserReward(ctx context.Context, id string, collection dbiface.Collectio
 }
 
 //GetUserReward gets a single reward
-func (h *RewardHandler) GetUserReward(c echo.Context) error {
-	reward, httpError := findUserReward(context.Background(), c.Param("id"), h.UserReward)
+func (r *UserRewardHandler) GetUserReward(c echo.Context) error {
+	reward, httpError := findUserReward(context.Background(), c.Param("id"), r.UserReward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
@@ -124,25 +126,28 @@ func (h *RewardHandler) GetUserReward(c echo.Context) error {
 }
 
 //GetUserReward gets a single reward
-func (h *RewardHandler) ClaimReward(c echo.Context) error {
-	var wallet Wallet
-	var amountRedeemable int8 = 5
+func (r *UserRewardHandler) ClaimReward(c echo.Context) error {
+	var (
+		wallet           Wallet
+		amountRedeemable int8 = 5
+		txHash           string
+	)
 
-	userReward, httpError := findUserReward(context.Background(), c.Param("id"), h.UserReward)
+	userReward, httpError := findUserReward(context.Background(), c.Param("id"), r.UserReward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
-	reward, httpError := findReward(context.Background(), userReward.RewardId.String(), h.Reward)
+	reward, httpError := findReward(context.Background(), userReward.RewardId.String(), r.Reward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 
-	wallet, httpError := findWallet(context.Background(), userReward.UserId.String(), h.Reward)
+	wallet, httpError = findWallet(context.Background(), userReward.UserId.String(), r.Wallet)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 	var redeemableAmount = reward.Points * amountRedeemable
-	(Wallet, error) transferRewards(wallet, wallet.PublicKey, string(redeemableAmount))
+	txHash, _ = transferRewards(wallet, wallet.PublicKey, string(redeemableAmount))
 
-	//return c.JSON(http.StatusOK, reward)
+	return c.JSON(http.StatusOK, reward)
 }

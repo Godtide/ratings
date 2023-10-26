@@ -114,12 +114,9 @@ func (h *WalletHandler) GetWallet(c echo.Context) error {
 	return c.JSON(http.StatusOK, wallet)
 }
 
-func (w *WalletHandler) redeem() {
-
-}
-
 func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) (string, error) {
-	client, err := ethclient.Dial("https://rinkeby.infura.io")
+
+	client, err := ethclient.Dial("https://polygon-mumbai.infura.io/v3/" + "07f0dfde071243bdbc4c3a53562536cf")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,7 +128,6 @@ func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) (
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fromAddress := common.HexToAddress(wallet.PublicKey)
 
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
