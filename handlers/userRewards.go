@@ -129,10 +129,10 @@ func (r *UserRewardHandler) GetUserReward(c echo.Context) error {
 func (r *UserRewardHandler) ClaimReward(c echo.Context) error {
 	var (
 		wallet           Wallet
-		amountRedeemable int8 = 5
+		amountRedeemable int8
 		txHash           string
 	)
-
+	amountRedeemable = 5
 	userReward, httpError := findUserReward(context.Background(), c.Param("id"), r.UserReward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
@@ -149,5 +149,5 @@ func (r *UserRewardHandler) ClaimReward(c echo.Context) error {
 	var redeemableAmount = reward.Points * amountRedeemable
 	txHash, _ = transferRewards(wallet, wallet.PublicKey, string(redeemableAmount))
 
-	return c.JSON(http.StatusOK, reward)
+	return c.JSON(http.StatusOK, txHash)
 }
