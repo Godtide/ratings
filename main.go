@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/robfig/cron/v3"
 	"net/http"
 	"strings"
 
@@ -26,12 +27,14 @@ const (
 )
 
 var (
-	c         *mongo.Client
-	db        *mongo.Database
-	prodCol   *mongo.Collection
-	usersCol  *mongo.Collection
-	walletCol *mongo.Collection
-	cfg       config.Properties
+	c             *mongo.Client
+	db            *mongo.Database
+	prodCol       *mongo.Collection
+	rewardCol     *mongo.Collection
+	usersCol      *mongo.Collection
+	userRewardCol *mongo.Collection
+	walletCol     *mongo.Collection
+	cfg           config.Properties
 )
 
 func init() {
@@ -48,6 +51,8 @@ func init() {
 	prodCol = db.Collection(cfg.ProductCollection)
 	usersCol = db.Collection(cfg.UsersCollection)
 	walletCol = db.Collection(cfg.WalletCollection)
+	userRewardCol = db.Collection(cfg.UsersRewardCollection)
+	rewardCol = db.Collection(cfg.RewardCollection)
 
 	isUserIndexUnique := true
 	indexModel := mongo.IndexModel{
@@ -99,6 +104,7 @@ func adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 func main() {
 	e := echo.New()
+	d := cron.New()
 	e.Logger.SetLevel(log.DEBUG)
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(addCorrelationID)
@@ -112,6 +118,9 @@ func main() {
 	}))
 	h := &handlers.ProductHandler{Col: prodCol}
 	uh := &handlers.UsersHandler{UserCol: usersCol, WalletCol: walletCol}
+	us := &handlers.UserRewardHandler{UserReward: userRewardCol}
+	ar := &handlers.RewardHandler{UserReward: userRewardCol, Reward: rewardCol}
+
 	e.GET("/products/:id", h.GetProduct)
 	e.DELETE("/products/:id", h.DeleteProduct, jwtMiddleware, adminMiddleware)
 	e.PUT("/products/:id", h.UpdateProduct, middleware.BodyLimit("1M"), jwtMiddleware)
@@ -119,7 +128,22 @@ func main() {
 	e.GET("/products", h.GetProducts)
 	e.POST("/users", uh.CreateUser)
 	e.POST("/auth", uh.AuthnUser)
+	e.POST("/reward/create", us.CreateUserRewards)
+	e.POST("/reward/claim", us.CreateUserRewards)
+	e.POST("/admin/reward", ar.CreateRewards, jwtMiddleware, adminMiddleware)
+
+	// Start the cron scheduler
+	d.Start()
+
+	// Add your cron job
+	d.AddFunc("@daily", func() {
+
+		// Define the task you want to run periodically
+		// For example, you can use Echo's handlers or other functions here
+		// This function will be executed once a day
+	})
 
 	e.Logger.Infof("Listening on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
+
 }

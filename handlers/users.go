@@ -140,6 +140,7 @@ func (h *UsersHandler) CreateUser(c echo.Context) error {
 	c.Response().Header().Set("x-auth-token", "Bearer "+token)
 	return c.JSON(http.StatusCreated, fullWallet)
 }
+
 func authenticateUser(ctx context.Context, reqUser User, collection dbiface.CollectionAPI) (User, *echo.HTTPError) {
 	var storedUser User //user in db
 	// check whether the user exists or not

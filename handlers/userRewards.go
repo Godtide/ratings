@@ -16,7 +16,8 @@ import (
 type UserReward struct {
 	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id"validate:"omitempty"`
 	UserId    primitive.ObjectID `json:"user_id, omitempty" bson:"user_id, omitempty"`
-	status    string             `         json:"status,omitempty" bson:"status" validate:"required"` //open, redeemed, expired
+	RewardId  primitive.ObjectID `json:"user_id, omitempty" bson:"user_id, omitempty"`
+	status    string             `json:"status,omitempty" bson:"status" validate:"required"` //open, redeemed, expired
 	CreatedAt time.Time          `json:"createdAt" bson:"createdAt" validate:"required"`
 	expiresAt time.Time          `json:"expiresAt" bson:"expiresAt" validate:"required"` //expiry in days, gets deleted after expiry
 }
@@ -38,7 +39,7 @@ func insertUserReward(ctx context.Context, reward UserReward, collection dbiface
 }
 
 //CreateRewards create rewards on mongodb database
-func (r *RewardHandler) CreateUserRewards(c echo.Context) error {
+func (r *UserRewardHandler) CreateUserRewards(c echo.Context) error {
 	var reward UserReward
 	c.Echo().Validator = &rewardValidator{validator: v}
 	if err := c.Bind(&reward); err != nil {
@@ -49,7 +50,7 @@ func (r *RewardHandler) CreateUserRewards(c echo.Context) error {
 		log.Errorf("Unable to validate the product %+v %v", reward, err)
 		return c.JSON(http.StatusBadRequest, errorMessage{Message: "unable to validate request payload"})
 	}
-	IDs, httpError := insertUserReward(context.Background(), reward, r.Reward)
+	IDs, httpError := insertUserReward(context.Background(), reward, r.UserReward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
@@ -95,8 +96,8 @@ func (h *RewardHandler) GetUserRewards(c echo.Context) error {
 	return c.JSON(http.StatusOK, products)
 }
 
-func findUserReward(ctx context.Context, id string, collection dbiface.CollectionAPI) (Reward, *echo.HTTPError) {
-	var reward Reward
+func findUserReward(ctx context.Context, id string, collection dbiface.CollectionAPI) (UserReward, *echo.HTTPError) {
+	var reward UserReward
 	docID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		log.Errorf("Unable to convert to Object ID : %v", err)
@@ -113,11 +114,36 @@ func findUserReward(ctx context.Context, id string, collection dbiface.Collectio
 	return reward, nil
 }
 
-//GetProduct gets a single reward
+//GetUserReward gets a single reward
 func (h *RewardHandler) GetUserReward(c echo.Context) error {
-	reward, httpError := findUserReward(context.Background(), c.Param("id"), h.Reward)
+	reward, httpError := findUserReward(context.Background(), c.Param("id"), h.UserReward)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 	return c.JSON(http.StatusOK, reward)
+}
+
+//GetUserReward gets a single reward
+func (h *RewardHandler) ClaimReward(c echo.Context) error {
+	var wallet Wallet
+	var amountRedeemable int8 = 5
+
+	userReward, httpError := findUserReward(context.Background(), c.Param("id"), h.UserReward)
+	if httpError != nil {
+		return c.JSON(httpError.Code, httpError.Message)
+	}
+	reward, httpError := findReward(context.Background(), userReward.RewardId.String(), h.Reward)
+	if httpError != nil {
+		return c.JSON(httpError.Code, httpError.Message)
+	}
+
+	wallet, httpError := findWallet(context.Background(), userReward.UserId.String(), h.Reward)
+	if httpError != nil {
+		return c.JSON(httpError.Code, httpError.Message)
+	}
+
+	redeemableAmount = reward.Points * amountRedeemable
+	transferRewards(wallet, wallet.PublicKey, redeemableAmount)
+
+	//return c.JSON(http.StatusOK, reward)
 }

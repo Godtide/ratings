@@ -4,13 +4,19 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"github.com/Godtide/rating/dbiface"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/net/context"
+	"math/big"
 	"net/http"
 )
 
@@ -77,4 +83,115 @@ func createWallet() (Wallet, error) {
 		PrivateKey: hexutil.Encode(hash.Sum(nil)[12:]),
 		PublicKey:  address,
 	}, nil
+}
+
+//find user wallets
+
+func findWallet(ctx context.Context, userId string, collection dbiface.CollectionAPI) (Wallet, *echo.HTTPError) {
+	var wallet Wallet
+	docID, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		log.Errorf("Unable to convert to Object ID : %v", err)
+		return wallet,
+			echo.NewHTTPError(http.StatusInternalServerError, errorMessage{Message: "unable to convert to ObjectID"})
+	}
+	res := collection.FindOne(ctx, bson.M{"user_id": docID})
+	err = res.Decode(&wallet)
+	if err != nil {
+		log.Errorf("Unable to find the product : %v", err)
+		return wallet,
+			echo.NewHTTPError(http.StatusNotFound, errorMessage{Message: "unable to find the wallet"})
+	}
+	return wallet, nil
+}
+
+//GetWallet gets a single wallet by userId
+func (h *WalletHandler) GetWallet(c echo.Context) error {
+	wallet, httpError := findWallet(context.Background(), c.Param("id"), h.WalletCol)
+	if httpError != nil {
+		return c.JSON(httpError.Code, httpError.Message)
+	}
+	return c.JSON(http.StatusOK, wallet)
+}
+
+func (w *WalletHandler) redeem() {
+
+}
+
+func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) {
+	client, err := ethclient.Dial("https://rinkeby.infura.io")
+	if err != nil {
+		log.Fatal(err)
+	}
+	//
+	//private key from config
+	//public address from config
+
+	privateKey, err := crypto.HexToECDSA(wallet.PrivateKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fromAddress := common.HexToAddress(wallet.PublicKey)
+
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	value := big.NewInt(0) // in wei (0 eth)
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	toAddress := common.HexToAddress(userPublicKey)
+	tokenAddress := common.HexToAddress(userWallet)
+
+	transferFnSignature := []byte("transfer(address,uint256)")
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(transferFnSignature)
+	methodID := hash.Sum(nil)[:4]
+	fmt.Println(hexutil.Encode(methodID)) // 0xa9059cbb
+
+	paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
+	fmt.Println(hexutil.Encode(paddedAddress)) // 0x0000000000000000000000004592d8f8d7b001e72cb26a73e4fa1806a51ac79d
+
+	amount := new(big.Int)
+	amount.SetString(rewardAmount+"e18", 10) // tokens in wei e18
+	paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
+	fmt.Println(hexutil.Encode(paddedAmount)) // 0x00000000000000000000000000000000000000000000003635c9adc5dea00000
+
+	var data []byte
+	data = append(data, methodID...)
+	data = append(data, paddedAddress...)
+	data = append(data, paddedAmount...)
+
+	gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
+		To:   &toAddress,
+		Data: data,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(gasLimit) // 23256
+
+	tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
+
+	chainID, err := client.NetworkID(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("tx sent: %s", signedTx.Hash().Hex()) // tx sent: 0xa56316b637a94c4cc0331c73ef26389d6c097506d581073f927275e7a6ece0bc
 }
