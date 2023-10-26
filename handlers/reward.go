@@ -14,14 +14,13 @@ import (
 
 //Reward describes reward types available
 type Reward struct {
-	ID     primitive.ObjectID `json:"_id,omitempty" bson:"_id"validate:"required"`
-	Type   string             `         json:"type" bson:"type" validate:"required"` //high. medium, low
-	Points int8               `json:"points, omitempty" bson:"points" validate:"required"`
-	//AmountRedeemable int8             `json:"redeemable" bson:"redeemable" validate:"required"`
-	expiry    int8      `json:"expiry" bson:"expiry" validate:"required"` //expiry in days
-	CreatedAt time.Time `json:"createdAt" bson:"createdAt" validate:"required"`
-	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt" validate:"required"`
-	DeletedAt time.Time `json:"deletedAt" bson:"deletedAt" validate:"required"`
+	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id"validate:"required"`
+	Type      string             `         json:"type" bson:"type" validate:"required"` //high. medium, low
+	Points    int8               `json:"points, omitempty" bson:"points" validate:"required"`
+	expiry    int8               `json:"expiry" bson:"expiry" validate:"required"` //expiry in days
+	CreatedAt time.Time          `json:"createdAt" bson:"createdAt" validate:"required"`
+	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt" validate:"required"`
+	DeletedAt time.Time          `json:"deletedAt" bson:"deletedAt" validate:"required"`
 }
 
 //RewardHandler a user_reward handler

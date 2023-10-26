@@ -118,7 +118,7 @@ func (w *WalletHandler) redeem() {
 
 }
 
-func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) {
+func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) (string, error) {
 	client, err := ethclient.Dial("https://rinkeby.infura.io")
 	if err != nil {
 		log.Fatal(err)
@@ -192,6 +192,8 @@ func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Printf("tx sent: %s", signedTx.Hash().Hex()) // tx sent: 0xa56316b637a94c4cc0331c73ef26389d6c097506d581073f927275e7a6ece0bc
+
+	return signedTx.Hash().Hex(), nil
+
 }

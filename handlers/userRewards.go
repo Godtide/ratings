@@ -141,9 +141,8 @@ func (h *RewardHandler) ClaimReward(c echo.Context) error {
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
-
-	redeemableAmount = reward.Points * amountRedeemable
-	transferRewards(wallet, wallet.PublicKey, redeemableAmount)
+	var redeemableAmount = reward.Points * amountRedeemable
+	(Wallet, error) transferRewards(wallet, wallet.PublicKey, string(redeemableAmount))
 
 	//return c.JSON(http.StatusOK, reward)
 }
