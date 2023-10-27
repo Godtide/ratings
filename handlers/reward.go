@@ -14,23 +14,25 @@ import (
 
 //Reward describes reward types available
 type Reward struct {
-	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id"validate:"required"`
-	Type      string             `         json:"type" bson:"type" validate:"required"` //high. medium, low
-	Points    int8               `json:"points, omitempty" bson:"points" validate:"required"`
-	expiry    int8               `json:"expiry" bson:"expiry" validate:"required"` //expiry in days
-	CreatedAt time.Time          `json:"createdAt" bson:"createdAt" validate:"required"`
-	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt" validate:"required"`
-	DeletedAt time.Time          `json:"deletedAt" bson:"deletedAt" validate:"required"`
+	ID               primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	Type             string             `json:"type" bson:"type" validate:"required"` //high. medium, low
+	Points           int8               `json:"points, omitempty" bson:"points" validate:"required"`
+	AmountRedeemable int8               `json:"amountRedeemable, omitempty" bson:"amountRedeemable" validate:"required"`
+	expiry           int8               `json:"expiry" bson:"expiry" validate:"required"` //expiry in days
+	CreatedAt        time.Time          `json:"createdAt, omitempty" bson:"createdAt, omitempty"`
+	UpdatedAt        time.Time          `json:"updatedAt, omitempty" bson:"updatedAt, omitempty"`
+	DeletedAt        time.Time          `json:"deletedAt, omitempty" bson:"deletedAt, omitempty"`
 }
 
 //RewardHandler a user_reward handler
 type RewardHandler struct {
-	Reward     dbiface.CollectionAPI
-	UserReward dbiface.CollectionAPI
+	RewardCol     dbiface.CollectionAPI
+	UserRewardCol dbiface.CollectionAPI
 }
 
 func insertReward(ctx context.Context, reward Reward, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
 	reward.ID = primitive.NewObjectID()
+	reward.CreatedAt = time.Now()
 	insertID, err := collection.InsertOne(ctx, reward)
 	if err != nil {
 		log.Errorf("Unable to insert to Database:%v", err)
@@ -52,7 +54,7 @@ func (r *RewardHandler) CreateRewards(c echo.Context) error {
 		log.Errorf("Unable to validate the product %+v %v", reward, err)
 		return c.JSON(http.StatusBadRequest, errorMessage{Message: "unable to validate request payload"})
 	}
-	IDs, httpError := insertReward(context.Background(), reward, r.Reward)
+	IDs, httpError := insertReward(context.Background(), reward, r.RewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
@@ -91,7 +93,7 @@ func findRewards(ctx context.Context, q url.Values, collection dbiface.Collectio
 
 //GetRewards gets a list of reward
 func (h *RewardHandler) GetRewards(c echo.Context) error {
-	products, httpError := findRewards(context.Background(), c.QueryParams(), h.Reward)
+	products, httpError := findRewards(context.Background(), c.QueryParams(), h.RewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
@@ -118,7 +120,7 @@ func findReward(ctx context.Context, id string, collection dbiface.CollectionAPI
 
 //GetProduct gets a single reward
 func (h *RewardHandler) GetReward(c echo.Context) error {
-	reward, httpError := findReward(context.Background(), c.Param("id"), h.Reward)
+	reward, httpError := findReward(context.Background(), c.Param("id"), h.RewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}

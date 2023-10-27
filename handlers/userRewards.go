@@ -24,14 +24,19 @@ type UserReward struct {
 
 //UserRewardHandler a user_reward handler
 type UserRewardHandler struct {
-	UserReward dbiface.CollectionAPI
-	Reward     dbiface.CollectionAPI
-	Wallet     dbiface.CollectionAPI
+	UserRewardCol dbiface.CollectionAPI
+	RewardCol     dbiface.CollectionAPI
+	WalletCol     dbiface.CollectionAPI
+	Wallet        Wallet
+	//PrivateKey    string
+	//PublicKey    string
 }
 
-func insertUserReward(ctx context.Context, reward UserReward, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
-	reward.ID = primitive.NewObjectID()
-	insertID, err := collection.InsertOne(ctx, reward)
+func insertUserReward(ctx context.Context, userReward UserReward, collection dbiface.CollectionAPI) (interface{}, *echo.HTTPError) {
+	userReward.ID = primitive.NewObjectID()
+	userReward.CreatedAt = time.Now()
+
+	insertID, err := collection.InsertOne(ctx, userReward)
 	if err != nil {
 		log.Errorf("Unable to insert to Database:%v", err)
 		return nil,
@@ -52,7 +57,7 @@ func (r *UserRewardHandler) CreateUserRewards(c echo.Context) error {
 		log.Errorf("Unable to validate the product %+v %v", reward, err)
 		return c.JSON(http.StatusBadRequest, errorMessage{Message: "unable to validate request payload"})
 	}
-	IDs, httpError := insertUserReward(context.Background(), reward, r.UserReward)
+	IDs, httpError := insertUserReward(context.Background(), reward, r.UserRewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
@@ -91,7 +96,7 @@ func findUserRewards(ctx context.Context, q url.Values, collection dbiface.Colle
 
 //GetRewards gets a list of reward
 func (r *UserRewardHandler) GetUserRewards(c echo.Context) error {
-	products, httpError := findUserRewards(context.Background(), c.QueryParams(), r.UserReward)
+	products, httpError := findUserRewards(context.Background(), c.QueryParams(), r.UserRewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
@@ -118,7 +123,7 @@ func findUserReward(ctx context.Context, id string, collection dbiface.Collectio
 
 //GetUserReward gets a single reward
 func (r *UserRewardHandler) GetUserReward(c echo.Context) error {
-	reward, httpError := findUserReward(context.Background(), c.Param("id"), r.UserReward)
+	reward, httpError := findUserReward(context.Background(), c.Param("id"), r.UserRewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
@@ -128,26 +133,24 @@ func (r *UserRewardHandler) GetUserReward(c echo.Context) error {
 //GetUserReward gets a single reward
 func (r *UserRewardHandler) ClaimReward(c echo.Context) error {
 	var (
-		wallet           Wallet
-		amountRedeemable int8
-		txHash           string
+		wallet Wallet
+		txHash string
 	)
-	amountRedeemable = 5
-	userReward, httpError := findUserReward(context.Background(), c.Param("id"), r.UserReward)
+	userReward, httpError := findUserReward(context.Background(), c.Param("id"), r.UserRewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
-	reward, httpError := findReward(context.Background(), userReward.RewardId.String(), r.Reward)
+	reward, httpError := findReward(context.Background(), userReward.RewardId.String(), r.RewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 
-	wallet, httpError = findWallet(context.Background(), userReward.UserId.String(), r.Wallet)
+	wallet, httpError = findWallet(context.Background(), userReward.UserId.String(), r.WalletCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
-	var redeemableAmount = reward.Points * amountRedeemable
-	txHash, _ = transferRewards(wallet, wallet.PublicKey, string(redeemableAmount))
+	var redeemableAmount = reward.Points * reward.AmountRedeemable
+	txHash, _ = transferRewards(r.Wallet, wallet.PublicKey, string(redeemableAmount))
 
 	return c.JSON(http.StatusOK, txHash)
 }
