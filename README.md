@@ -1,8 +1,5 @@
-### A simple  user reward system with rewards received as a tokenzied ERC20 asset
-
-For security of assets in production environment [KMS](https://docs.aws.amazon.com/kms/latest/developerguide/overview.html) 
-is most suitable
-
+### consideration
+For security of assets in production environment [KMS](https://docs.aws.amazon.com/kms/latest/developerguide/overview.html) is most suitable
 ###  Get started
 - [ ] Download and [install](https://go.dev/doc/install) golang 
 - [ ] git clone
