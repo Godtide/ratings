@@ -24,7 +24,7 @@ type Reward struct {
 	DeletedAt        time.Time          `json:"deletedAt, omitempty" bson:"deletedAt, omitempty"`
 }
 
-//RewardHandler a user_reward handler
+//RewardHandler handles types of rewards created by an admin
 type RewardHandler struct {
 	RewardCol     dbiface.CollectionAPI
 	UserRewardCol dbiface.CollectionAPI
@@ -51,7 +51,7 @@ func (r *RewardHandler) CreateRewards(c echo.Context) error {
 		return c.JSON(http.StatusUnprocessableEntity, errorMessage{Message: "unable to parse request payload"})
 	}
 	if err := c.Validate(reward); err != nil {
-		log.Errorf("Unable to validate the product %+v %v", reward, err)
+		log.Errorf("Unable to validate the reward %+v %v", reward, err)
 		return c.JSON(http.StatusBadRequest, errorMessage{Message: "unable to validate request payload"})
 	}
 	IDs, httpError := insertReward(context.Background(), reward, r.RewardCol)
@@ -86,18 +86,18 @@ func findRewards(ctx context.Context, q url.Values, collection dbiface.Collectio
 	if err != nil {
 		log.Errorf("Unable to read the cursor : %v", err)
 		return rewards,
-			echo.NewHTTPError(http.StatusUnprocessableEntity, errorMessage{Message: "unable to parse retrieved products"})
+			echo.NewHTTPError(http.StatusUnprocessableEntity, errorMessage{Message: "unable to parse retrieved rewards"})
 	}
 	return rewards, nil
 }
 
-//GetRewards gets a list of reward
+//GetRewards gets a list of rewards available
 func (h *RewardHandler) GetRewards(c echo.Context) error {
-	products, httpError := findRewards(context.Background(), c.QueryParams(), h.RewardCol)
+	rewards, httpError := findRewards(context.Background(), c.QueryParams(), h.RewardCol)
 	if httpError != nil {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
-	return c.JSON(http.StatusOK, products)
+	return c.JSON(http.StatusOK, rewards)
 }
 
 func findReward(ctx context.Context, id string, collection dbiface.CollectionAPI) (Reward, *echo.HTTPError) {
@@ -118,11 +118,3 @@ func findReward(ctx context.Context, id string, collection dbiface.CollectionAPI
 	return reward, nil
 }
 
-//GetProduct gets a single reward
-func (h *RewardHandler) GetReward(c echo.Context) error {
-	reward, httpError := findReward(context.Background(), c.Param("id"), h.RewardCol)
-	if httpError != nil {
-		return c.JSON(httpError.Code, httpError.Message)
-	}
-	return c.JSON(http.StatusOK, reward)
-}

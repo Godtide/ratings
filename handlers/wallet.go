@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-//Wallet describes an user wallet to manage keys
+//Wallet describes a user wallet to manage keys
 type Wallet struct {
 	ID         primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
 	UserId     primitive.ObjectID `json:"user_id, omitempty" bson:"user_id, omitempty"`
@@ -114,15 +114,14 @@ func (h *WalletHandler) GetWallet(c echo.Context) error {
 	return c.JSON(http.StatusOK, wallet)
 }
 
-func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) (string, error) {
+func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string, key string, contractAddress string) (string, error) {
 
-	client, err := ethclient.Dial("https://polygon-mumbai.infura.io/v3/" + "07f0dfde071243bdbc4c3a53562536cf")
+	var provider string = "https://optimism-mainnet.infura.io/v3/"
+
+	client, err := ethclient.Dial(provider + key)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//
-	//private key from config
-	//public address from config
 
 	privateKey, err := crypto.HexToECDSA(wallet.PrivateKey)
 	if err != nil {
@@ -142,21 +141,21 @@ func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) (
 	}
 
 	toAddress := common.HexToAddress(userPublicKey)
-	tokenAddress := common.HexToAddress(userWallet)
+	tokenAddress := common.HexToAddress(contractAddress)
 
 	transferFnSignature := []byte("transfer(address,uint256)")
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write(transferFnSignature)
 	methodID := hash.Sum(nil)[:4]
-	fmt.Println(hexutil.Encode(methodID)) // 0xa9059cbb
+	fmt.Println(hexutil.Encode(methodID)) 
 
 	paddedAddress := common.LeftPadBytes(toAddress.Bytes(), 32)
-	fmt.Println(hexutil.Encode(paddedAddress)) // 0x0000000000000000000000004592d8f8d7b001e72cb26a73e4fa1806a51ac79d
+	fmt.Println(hexutil.Encode(paddedAddress))
 
 	amount := new(big.Int)
-	amount.SetString(rewardAmount+"e18", 10) // tokens in wei e18
+	amount.SetString(rewardAmount+"e18", 10) 
 	paddedAmount := common.LeftPadBytes(amount.Bytes(), 32)
-	fmt.Println(hexutil.Encode(paddedAmount)) // 0x00000000000000000000000000000000000000000000003635c9adc5dea00000
+	fmt.Println(hexutil.Encode(paddedAmount))
 
 	var data []byte
 	data = append(data, methodID...)
@@ -170,7 +169,6 @@ func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) (
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(gasLimit) // 23256
 
 	tx := types.NewTransaction(nonce, tokenAddress, value, gasLimit, gasPrice, data)
 
@@ -188,7 +186,7 @@ func transferRewards(wallet Wallet, userPublicKey string, rewardAmount string) (
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("tx sent: %s", signedTx.Hash().Hex()) // tx sent: 0xa56316b637a94c4cc0331c73ef26389d6c097506d581073f927275e7a6ece0bc
+	fmt.Printf("tx sent: %s", signedTx.Hash().Hex())
 
 	return signedTx.Hash().Hex(), nil
 

@@ -46,23 +46,6 @@ func isCredValid(givenPwd, storedPwd string) bool {
 	return true
 }
 
-func (u User) createToken() (string, error) {
-	if err := cleanenv.ReadEnv(&prop); err != nil {
-		log.Errorf("Configuration cannot be read : %v", err)
-	}
-	claims := jwt.MapClaims{}
-	claims["authorized"] = u.IsAdmin
-	claims["user_id"] = u.Email
-	claims["exp"] = time.Now().Add(time.Minute * 15).Unix()
-	at := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := at.SignedString([]byte(prop.JwtTokenSecret))
-	if err != nil {
-		log.Errorf("Unable to generate the token :%v", err)
-		return "", err
-	}
-	return token, nil
-}
-
 func insertUser(ctx context.Context, user User, collection dbiface.CollectionAPI) (User, *echo.HTTPError) {
 	var newUser User
 
@@ -131,63 +114,5 @@ func (h *UsersHandler) CreateUser(c echo.Context) error {
 		return c.JSON(httpError.Code, httpError.Message)
 	}
 
-	token, err := user.createToken()
-	if err != nil {
-		log.Errorf("Unable to generate the token.")
-		return echo.NewHTTPError(http.StatusInternalServerError,
-			errorMessage{Message: "Unable to generate the token"})
-	}
-	c.Response().Header().Set("x-auth-token", "Bearer "+token)
 	return c.JSON(http.StatusCreated, fullWallet)
-}
-
-func authenticateUser(ctx context.Context, reqUser User, collection dbiface.CollectionAPI) (User, *echo.HTTPError) {
-	var storedUser User //user in db
-	// check whether the user exists or not
-	res := collection.FindOne(ctx, bson.M{"username": reqUser.Email})
-	err := res.Decode(&storedUser)
-	if err != nil && err != mongo.ErrNoDocuments {
-		log.Errorf("Unable to decode retrieved user: %v", err)
-		return storedUser,
-			echo.NewHTTPError(http.StatusUnprocessableEntity, errorMessage{Message: "Unable to decode retrieved user"})
-	}
-	if err == mongo.ErrNoDocuments {
-		log.Errorf("User %s does not exist.", reqUser.Email)
-		return storedUser,
-			echo.NewHTTPError(http.StatusNotFound, errorMessage{Message: "User does not exist"})
-	}
-	//validate the password
-	if !isCredValid(reqUser.Password, storedUser.Password) {
-		return storedUser,
-			echo.NewHTTPError(http.StatusUnauthorized, errorMessage{Message: "Credentials invalid"})
-	}
-	return User{Email: storedUser.Email}, nil
-}
-
-// AuthnUser authenticates a user
-func (h *UsersHandler) AuthnUser(c echo.Context) error {
-	var user User
-	c.Echo().Validator = &userValidator{validator: v}
-	if err := c.Bind(&user); err != nil {
-		log.Errorf("Unable to bind to user struct.")
-		return c.JSON(http.StatusUnprocessableEntity,
-			errorMessage{Message: "Unable to parse the request payload."})
-	}
-	if err := c.Validate(user); err != nil {
-		log.Errorf("Unable to validate the requested body.")
-		return c.JSON(http.StatusBadRequest,
-			errorMessage{Message: "Unable to validate request payload"})
-	}
-	user, httpError := authenticateUser(context.Background(), user, h.UserCol)
-	if httpError != nil {
-		return c.JSON(httpError.Code, httpError.Message)
-	}
-	token, err := user.createToken()
-	if err != nil {
-		log.Errorf("Unable to generate the token.")
-		return c.JSON(http.StatusInternalServerError,
-			errorMessage{Message: "Unable to generate the token"})
-	}
-	c.Response().Header().Set("x-auth-token", "Bearer "+token)
-	return c.JSON(http.StatusOK, User{Email: user.Email})
 }

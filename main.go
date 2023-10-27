@@ -50,7 +50,6 @@ func init() {
 	walletCol = db.Collection(cfg.WalletCollection)
 	userRewardCol = db.Collection(cfg.UsersRewardCollection)
 	rewardCol = db.Collection(cfg.RewardCollection)
-	//wallet = {PrivateKey: cfg.MasterPrivateKey, PublicKey: cfg.MasterPublicKey}
 
 	isUserIndexUnique := true
 	indexModel := mongo.IndexModel{
@@ -82,66 +81,36 @@ func addCorrelationID(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		hToken := c.Request().Header.Get("x-auth-token") // Bearer slfjl2jrlk23j
-		token := strings.Split(hToken, " ")[1]
-		claims := jwt.MapClaims{}
-		_, err := jwt.ParseWithClaims(token, claims, func(*jwt.Token) (interface{}, error) {
-			return []byte(cfg.JwtTokenSecret), nil
-		})
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Unable to parse token")
-		}
-		if !claims["authorized"].(bool) {
-			return echo.NewHTTPError(http.StatusForbidden, "Not authorized")
-		}
-		return next(c)
-	}
-}
-
 func main() {
 	e := echo.New()
 	//d := cron.New()
 	e.Logger.SetLevel(log.DEBUG)
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(addCorrelationID)
-	//jwtMiddleware := middleware.JWTWithConfig(middleware.JWTConfig{
-	//	SigningKey:  []byte(cfg.JwtTokenSecret),
-	//	TokenLookup: "header:x-auth-token",
-	//})
+	
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Format: `${time_rfc3339_nano} ${remote_ip} ${header:X-Correlation-ID} ${host} ${method} ${uri} ${user_agent} ` +
 			`${status} ${error} ${latency_human}` + "\n",
 	}))
-	//h := &handlers.ProductHandler{Col: prodCol}
+
 	uh := &handlers.UsersHandler{UserCol: usersCol, WalletCol: walletCol}
-	us := &handlers.UserRewardHandler{UserRewardCol: userRewardCol, RewardCol: rewardCol, WalletCol: walletCol, Wallet: handlers.Wallet{PrivateKey: cfg.MasterPrivateKey,
-		PublicKey: cfg.MasterPublicKey},
+	us := &handlers.UserRewardHandler{
+		UserRewardCol: userRewardCol,
+	    RewardCol: rewardCol,
+	    WalletCol: walletCol,
+		Wallet: handlers.Wallet{PrivateKey: cfg.MasterPrivateKey, PublicKey: cfg.MasterPublicKey},
+		Apikey : cfg.ApiKey,
+	    ContractAdrress : cfg.ContractAdrress,
 	}
 	ar := &handlers.RewardHandler{UserRewardCol: userRewardCol, RewardCol: rewardCol}
 
-	//e.GET("/products/:id", h.GetProduct)
-	//e.DELETE("/products/:id", h.DeleteProduct, jwtMiddleware, adminMiddleware)
-	//e.PUT("/products/:id", h.UpdateProduct, middleware.BodyLimit("1M"), jwtMiddleware)
-	//e.POST("/products", h.CreateProducts, middleware.BodyLimit("1M"), jwtMiddleware)
-	//e.GET("/products", h.GetProducts)
+
 	e.POST("/users", uh.CreateUser)
-	e.POST("/auth", uh.AuthnUser)
 	e.POST("/reward/create", us.CreateUserRewards)
 	e.POST("/reward/claim", us.ClaimReward)
 	e.POST("/admin/reward", ar.CreateRewards)
+	e.GET("/rewards", h.GetRewards)
 
-	//// Start the cron scheduler
-	//d.Start()
-	//
-	//// Add your cron job
-	//d.AddFunc("@daily", func() {
-	//
-	//	// Define the task you want to run periodically
-	//	// For example, you can use Echo's handlers or other functions here
-	//	// This function will be executed once a day
-	//})
 
 	e.Logger.Infof("Listening on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
