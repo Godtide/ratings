@@ -98,7 +98,7 @@ func findWallet(ctx context.Context, userId string, collection dbiface.Collectio
 	res := collection.FindOne(ctx, bson.M{"user_id": docID})
 	err = res.Decode(&wallet)
 	if err != nil {
-		log.Errorf("Unable to find the product : %v", err)
+		log.Errorf("Unable to find the wallet : %v", err)
 		return wallet,
 			echo.NewHTTPError(http.StatusNotFound, errorMessage{Message: "unable to find the wallet"})
 	}

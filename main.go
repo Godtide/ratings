@@ -45,7 +45,6 @@ func init() {
 		log.Fatalf("Unable to connect to database : %v", err)
 	}
 	db = c.Database(cfg.DBName)
-	prodCol = db.Collection(cfg.ProductCollection)
 	usersCol = db.Collection(cfg.UsersCollection)
 	walletCol = db.Collection(cfg.WalletCollection)
 	userRewardCol = db.Collection(cfg.UsersRewardCollection)
