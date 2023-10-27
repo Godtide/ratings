@@ -103,7 +103,6 @@ func main() {
 	}
 	ar := &handlers.RewardHandler{UserRewardCol: userRewardCol, RewardCol: rewardCol}
 
-
 	e.POST("/users", uh.CreateUser)
 	e.POST("/admin/reward", ar.CreateRewards)
 	e.POST("/reward/create", us.CreateUserRewards)
