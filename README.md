@@ -1,4 +1,4 @@
- A simple reward system with rewards received as a tokenzied ERC20 asset.
+### A simple reward system with rewards received as a tokenzied ERC20 asset.
 
 For security of assets in production environment [KMS](https://docs.aws.amazon.com/kms/latest/developerguide/overview.html) 
 is most suitable
@@ -17,7 +17,7 @@ is most suitable
 # SequenceFlow
 ![SequenceFlow](https://shorturl.at/BGHS6)
 
-Deployed contract [SwellToken](https://shorturl.at/eluvT)
+Deployed contract [swellToken](https://shorturl.at/eluvT)
 
 
 
