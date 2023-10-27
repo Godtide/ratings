@@ -1,10 +1,10 @@
-# Simple rating system with rewards received in Ethereum wallets and reward a tokenized ERC20 swell token asset
+ Simple rating system with rewards received in Ethereum wallets and reward a tokenized ERC20 swell token asset
 # Consideration
 security of assets in production environment [AWSKMS](https://docs.aws.amazon.com/kms/latest/developerguide/overview.html) 
 is best suitable for securing assets in production
 
 # To use
--download and [install] (https://go.dev/doc/install) golang 
+-download and [install](https://go.dev/doc/install) golang 
 -git clone
 -cd root directory
 Assumin you're on the right GO path  
@@ -19,7 +19,7 @@ Assumin you're on the right GO path
 # Architecture
 ![SequenceFlow](https://shorturl.at/BGHS6)
 
-# Deployed contract [SwellToken] (https://shorturl.at/eluvT)
+# Deployed contract [SwellToken](https://shorturl.at/eluvT)
 
 
 
