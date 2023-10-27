@@ -1,4 +1,4 @@
-Simple rating system with rewards received in Ethereum wallets and reward a tokenized ERC20 swell token asset.
+ A simple reward system with rewards received as a tokenzied ERC20 asset.
 
 For security of assets in production environment [KMS](https://docs.aws.amazon.com/kms/latest/developerguide/overview.html) 
 is most suitable
@@ -11,8 +11,8 @@ is most suitable
 - [ ] go run main.go
 
   To do
-- permission for create_Rewards route to used by only admin
-- cronjob to delete expired userRewards
+- [ ] permission for create_Rewards route to used by only admin
+- [ ] cronjob to delete expired userRewards
 
 # SequenceFlow
 ![SequenceFlow](https://shorturl.at/BGHS6)
