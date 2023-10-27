@@ -1,7 +1,7 @@
 version: "2.2"
 services:
-  tronics:
-    container_name: rating
+  rewards:
+    container_name: rating-system
     build: .
     expose:
       - "8080"

@@ -83,11 +83,10 @@ func addCorrelationID(next echo.HandlerFunc) echo.HandlerFunc {
 
 func main() {
 	e := echo.New()
-	//d := cron.New()
 	e.Logger.SetLevel(log.DEBUG)
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(addCorrelationID)
-	
+
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Format: `${time_rfc3339_nano} ${remote_ip} ${header:X-Correlation-ID} ${host} ${method} ${uri} ${user_agent} ` +
 			`${status} ${error} ${latency_human}` + "\n",
@@ -106,11 +105,10 @@ func main() {
 
 
 	e.POST("/users", uh.CreateUser)
+	e.POST("/admin/reward", ar.CreateRewards)
 	e.POST("/reward/create", us.CreateUserRewards)
 	e.POST("/reward/claim", us.ClaimReward)
-	e.POST("/admin/reward", ar.CreateRewards)
 	e.GET("/rewards", h.GetRewards)
-
 
 	e.Logger.Infof("Listening on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
