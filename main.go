@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/robfig/cron/v3"
 	"net/http"
 	"strings"
 
@@ -12,9 +11,7 @@ import (
 
 	"github.com/Godtide/rating/config"
 	"github.com/Godtide/rating/handlers"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"github.com/labstack/gommon/random"
@@ -53,6 +50,7 @@ func init() {
 	walletCol = db.Collection(cfg.WalletCollection)
 	userRewardCol = db.Collection(cfg.UsersRewardCollection)
 	rewardCol = db.Collection(cfg.RewardCollection)
+	//wallet = {PrivateKey: cfg.MasterPrivateKey, PublicKey: cfg.MasterPublicKey}
 
 	isUserIndexUnique := true
 	indexModel := mongo.IndexModel{
@@ -104,44 +102,46 @@ func adminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 func main() {
 	e := echo.New()
-	d := cron.New()
+	//d := cron.New()
 	e.Logger.SetLevel(log.DEBUG)
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(addCorrelationID)
-	jwtMiddleware := middleware.JWTWithConfig(middleware.JWTConfig{
-		SigningKey:  []byte(cfg.JwtTokenSecret),
-		TokenLookup: "header:x-auth-token",
-	})
+	//jwtMiddleware := middleware.JWTWithConfig(middleware.JWTConfig{
+	//	SigningKey:  []byte(cfg.JwtTokenSecret),
+	//	TokenLookup: "header:x-auth-token",
+	//})
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Format: `${time_rfc3339_nano} ${remote_ip} ${header:X-Correlation-ID} ${host} ${method} ${uri} ${user_agent} ` +
 			`${status} ${error} ${latency_human}` + "\n",
 	}))
-	h := &handlers.ProductHandler{Col: prodCol}
+	//h := &handlers.ProductHandler{Col: prodCol}
 	uh := &handlers.UsersHandler{UserCol: usersCol, WalletCol: walletCol}
-	us := &handlers.UserRewardHandler{UserReward: userRewardCol}
-	ar := &handlers.RewardHandler{UserReward: userRewardCol, Reward: rewardCol}
+	us := &handlers.UserRewardHandler{UserRewardCol: userRewardCol, RewardCol: rewardCol, WalletCol: walletCol, Wallet: handlers.Wallet{PrivateKey: cfg.MasterPrivateKey,
+		PublicKey: cfg.MasterPublicKey},
+	}
+	ar := &handlers.RewardHandler{UserRewardCol: userRewardCol, RewardCol: rewardCol}
 
-	e.GET("/products/:id", h.GetProduct)
-	e.DELETE("/products/:id", h.DeleteProduct, jwtMiddleware, adminMiddleware)
-	e.PUT("/products/:id", h.UpdateProduct, middleware.BodyLimit("1M"), jwtMiddleware)
-	e.POST("/products", h.CreateProducts, middleware.BodyLimit("1M"), jwtMiddleware)
-	e.GET("/products", h.GetProducts)
+	//e.GET("/products/:id", h.GetProduct)
+	//e.DELETE("/products/:id", h.DeleteProduct, jwtMiddleware, adminMiddleware)
+	//e.PUT("/products/:id", h.UpdateProduct, middleware.BodyLimit("1M"), jwtMiddleware)
+	//e.POST("/products", h.CreateProducts, middleware.BodyLimit("1M"), jwtMiddleware)
+	//e.GET("/products", h.GetProducts)
 	e.POST("/users", uh.CreateUser)
 	e.POST("/auth", uh.AuthnUser)
 	e.POST("/reward/create", us.CreateUserRewards)
-	e.POST("/reward/claim", us.CreateUserRewards)
-	e.POST("/admin/reward", ar.CreateRewards, jwtMiddleware, adminMiddleware)
+	e.POST("/reward/claim", us.ClaimReward)
+	e.POST("/admin/reward", ar.CreateRewards)
 
-	// Start the cron scheduler
-	d.Start()
-
-	// Add your cron job
-	d.AddFunc("@daily", func() {
-
-		// Define the task you want to run periodically
-		// For example, you can use Echo's handlers or other functions here
-		// This function will be executed once a day
-	})
+	//// Start the cron scheduler
+	//d.Start()
+	//
+	//// Add your cron job
+	//d.AddFunc("@daily", func() {
+	//
+	//	// Define the task you want to run periodically
+	//	// For example, you can use Echo's handlers or other functions here
+	//	// This function will be executed once a day
+	//})
 
 	e.Logger.Infof("Listening on %s:%s", cfg.Host, cfg.Port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)))
